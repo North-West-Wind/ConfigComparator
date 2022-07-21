@@ -1,0 +1,5 @@
+{
+  "configcomparator.timeout.kick": "No return packet received within time limit.",
+  "configcomparator.files_mismatch.kick": "File hash mismatch!",
+  "configcomparator.files_mismatch.warn": "%s's file hash doesn't match with the server's."
+}

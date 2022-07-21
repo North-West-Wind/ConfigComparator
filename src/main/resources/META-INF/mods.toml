@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="GNU GPL v3"
+
+[[mods]]
+modId="configcomparator"
+version="1.0.0"
+displayName="Config Comparator"
+logoFile="examplemod.png"
+authors="NorthWestWind"
+description='''
+Compares the files between the client and the server. If there is a mismatch, the server will take actions.
+'''
+
+[[dependencies.configcomparator]]
+    modId="forge"
+    mandatory=true
+    versionRange="[40,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.configcomparator]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.18.2,1.19)"
+    ordering="NONE"
+    side="BOTH"
