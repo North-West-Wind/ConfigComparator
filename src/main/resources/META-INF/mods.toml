@@ -6,7 +6,7 @@ license="GNU GPL v3"
 modId="configcomparator"
 version="1.0.0"
 displayName="Config Comparator"
-logoFile="examplemod.png"
+logoFile="icon.png"
 authors="NorthWestWind"
 description='''
 Compares the files between the client and the server. If there is a mismatch, the server will take actions.
