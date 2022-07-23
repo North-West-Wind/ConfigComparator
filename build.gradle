@@ -14,7 +14,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 
 
-version = '1.0.0'
+version = '1.0.2'
 group = 'ml.northwestwind.configcomparator' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'configcomparator'
 

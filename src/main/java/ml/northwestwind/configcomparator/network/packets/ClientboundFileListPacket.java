@@ -2,7 +2,6 @@ package ml.northwestwind.configcomparator.network.packets;
 
 import com.google.common.collect.Sets;
 import ml.northwestwind.configcomparator.ConfigComparator;
-import ml.northwestwind.configcomparator.config.Config;
 import ml.northwestwind.configcomparator.network.Communicator;
 import ml.northwestwind.configcomparator.network.IPacket;
 import net.minecraft.network.FriendlyByteBuf;
@@ -23,7 +22,7 @@ public class ClientboundFileListPacket implements IPacket {
 
     static {
         try {
-            digest = MessageDigest.getInstance("SHA-256");
+            digest = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException ignored) { }
     }
 
@@ -43,13 +42,14 @@ public class ClientboundFileListPacket implements IPacket {
             if (file.isFile()) hash = hashFile(file, hash);
             else if (file.isDirectory()) hash = hashDirectory(file, hash);
         }
-        ConfigComparator.LOGGER.info("Client: SHA256 digest of files: {}", hash);
+        ConfigComparator.LOGGER.info("Client: SHA1 digest of files: {}", hash);
         Communicator.sendToServer(new ServerboundHashPacket(hash));
     }
 
     private static String hashFile(File file, String hash) {
         try (InputStream is = new FileInputStream(file)) {
-            return bytesToHex(digest.digest(is.readAllBytes()));
+            // fk windows
+            return bytesToHex(digest.digest(new String(is.readAllBytes()).replaceAll("\r\n", "\n").getBytes()));
         } catch (IOException e) {
             e.printStackTrace();
         }

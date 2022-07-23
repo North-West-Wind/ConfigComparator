@@ -1,11 +1,13 @@
 modLoader="javafml"
 loaderVersion="[40,)"
 license="GNU GPL v3"
+issueTrackerURL="https://github.com/North-West-Wind/ConfigComparator/issues"
 
 [[mods]]
 modId="configcomparator"
-version="1.0.0"
+version="1.0.2"
 displayName="Config Comparator"
+updateJSONURL="https://github.com/North-West-Wind/ConfigComparator/raw/main/update.json"
 logoFile="icon.png"
 authors="NorthWestWind"
 description='''

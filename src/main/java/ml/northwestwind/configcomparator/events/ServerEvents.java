@@ -6,7 +6,9 @@ import ml.northwestwind.configcomparator.config.Config;
 import ml.northwestwind.configcomparator.network.Communicator;
 import ml.northwestwind.configcomparator.network.packets.ClientboundFileListPacket;
 import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -15,6 +17,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,7 +27,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Mod.EventBusSubscriber(modid = ConfigComparator.MOD_ID, value = Dist.DEDICATED_SERVER)
 public class ServerEvents {
@@ -33,10 +35,11 @@ public class ServerEvents {
     private static final Set<String> ABSOLUTE_PATHS = Sets.newHashSet();
     private static final Set<UUID> verified = Sets.newHashSet();
     private static String hash = "";
+    private static Thread fileChecker = null;
 
     static {
         try {
-            digest = MessageDigest.getInstance("SHA-256");
+            digest = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException ignored) { }
     }
 
@@ -47,18 +50,54 @@ public class ServerEvents {
             if (file.isFile()) hashFile(file);
             else if (file.isDirectory()) hashDirectory(file);
         }
-        ConfigComparator.LOGGER.info("Server: SHA256 digest of files: {}", hash);
+        ConfigComparator.LOGGER.info("Server: SHA1 digest of files: {}", hash);
+        if (Config.getCheckInterval() > 0) {
+            fileChecker = new Thread(() -> {
+                while (!Thread.interrupted()) {
+                    if (Config.getCheckInterval() <= 0) Thread.currentThread().interrupt();
+                    else {
+                        try {
+                            Thread.sleep(Config.getCheckInterval());
+                            verified.clear();
+                            Communicator.sendToClient(PacketDistributor.ALL.noArg(), new ClientboundFileListPacket(CONFIG_FILES));
+                            new Thread(() -> {
+                                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+                                if (server == null) return;
+                                int acc = 0;
+                                try {
+                                    while (acc < Config.getTimeout() && !Thread.interrupted()) {
+                                        if (verified.containsAll(server.getPlayerList().getPlayers().stream().map(Entity::getUUID).toList())) Thread.currentThread().interrupt();
+                                        else {
+                                            Thread.sleep(100);
+                                            acc += 100;
+                                        }
+                                    }
+                                    for (ServerPlayer player : server.getPlayerList().getPlayers())
+                                        if (!verified.contains(player.getUUID())) player.connection.disconnect(new TranslatableComponent("configcomparator.timeout.kick"));
+                                } catch (InterruptedException ignored) { }
+                            }).start();
+                        } catch (InterruptedException ignored) { }
+                    }
+                }
+            });
+            fileChecker.start();
+        }
     }
 
     @SubscribeEvent
     public static void serverStopping(final ServerStoppingEvent event) {
         hash = "";
+        if (fileChecker != null) {
+            fileChecker.interrupt();
+            fileChecker = null;
+        }
     }
 
     private static void hashFile(File file) {
         if (ABSOLUTE_PATHS.contains(file.getAbsolutePath())) return;
         try (InputStream is = new FileInputStream(file)) {
-            hash = bytesToHex(digest.digest(is.readAllBytes()));
+            // fk windows
+            hash = bytesToHex(digest.digest(new String(is.readAllBytes()).replaceAll("\r\n", "\n").getBytes()));
             ABSOLUTE_PATHS.add(file.getAbsolutePath());
             CONFIG_FILES.add(file.getAbsolutePath().replace(FMLPaths.GAMEDIR.get().toFile().getAbsolutePath() + File.separator, ""));
         } catch (IOException e) {
