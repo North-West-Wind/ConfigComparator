@@ -5,7 +5,8 @@ import ml.northwestwind.configcomparator.ConfigComparator;
 import ml.northwestwind.configcomparator.config.Config;
 import ml.northwestwind.configcomparator.network.Communicator;
 import ml.northwestwind.configcomparator.network.packets.ClientboundFileListPacket;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -73,7 +74,7 @@ public class ServerEvents {
                                         }
                                     }
                                     for (ServerPlayer player : server.getPlayerList().getPlayers())
-                                        if (!verified.contains(player.getUUID())) player.connection.disconnect(new TranslatableComponent("configcomparator.timeout.kick"));
+                                        if (!verified.contains(player.getUUID())) player.connection.disconnect(MutableComponent.create(new TranslatableContents("configcomparator.timeout.kick")));
                                 } catch (InterruptedException ignored) { }
                             }).start();
                         } catch (InterruptedException ignored) { }
@@ -130,7 +131,7 @@ public class ServerEvents {
 
     @SubscribeEvent
     public static void playerLoggedIn(final PlayerEvent.PlayerLoggedInEvent event) {
-        if (hash.isEmpty() || !(event.getPlayer() instanceof ServerPlayer player)) return;
+        if (hash.isEmpty() || !(event.getEntity() instanceof ServerPlayer player)) return;
         Communicator.sendToClient(PacketDistributor.PLAYER.with(() -> player), new ClientboundFileListPacket(CONFIG_FILES));
         new Thread(() -> {
             int acc = 0;
@@ -142,14 +143,14 @@ public class ServerEvents {
                         acc += 100;
                     }
                 }
-                if (!verified.contains(player.getUUID())) player.connection.disconnect(new TranslatableComponent("configcomparator.timeout.kick"));
+                if (!verified.contains(player.getUUID())) player.connection.disconnect(MutableComponent.create(new TranslatableContents("configcomparator.timeout.kick")));
             } catch (InterruptedException ignored) { }
         }).start();
     }
 
     @SubscribeEvent
     public static void playerLoggedOut(final PlayerEvent.PlayerLoggedOutEvent event) {
-        if (hash.isEmpty() || !(event.getPlayer() instanceof ServerPlayer player)) return;
+        if (hash.isEmpty() || !(event.getEntity() instanceof ServerPlayer player)) return;
         verified.remove(player.getUUID());
     }
 

@@ -4,10 +4,10 @@ import ml.northwestwind.configcomparator.ConfigComparator;
 import ml.northwestwind.configcomparator.config.Config;
 import ml.northwestwind.configcomparator.events.ServerEvents;
 import ml.northwestwind.configcomparator.network.IPacket;
-import net.minecraft.Util;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.chat.TranslatableComponent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraftforge.network.NetworkEvent;
@@ -29,15 +29,15 @@ public class ServerboundHashPacket implements IPacket {
         if (player == null) return;
         if (!this.hash.equals(ServerEvents.getHash())) {
             switch (Config.getAction()) {
-                case KICK -> player.connection.disconnect(new TranslatableComponent("configcomparator.files_mismatch.kick"));
+                case KICK -> player.connection.disconnect(MutableComponent.create(new TranslatableContents("configcomparator.files_mismatch.kick")));
                 case WARN_ADMIN -> {
                     PlayerList list = player.getServer().getPlayerList();
                     for (String name : list.getOpNames()) {
                         ServerPlayer p = list.getPlayerByName(name);
-                        p.sendMessage(new TranslatableComponent("configcomparator.files_mismatch.warn", player.getDisplayName()), ChatType.SYSTEM, Util.NIL_UUID);
+                        p.sendSystemMessage(MutableComponent.create(new TranslatableContents("configcomparator.files_mismatch.warn", player.getDisplayName())));
                     }
                 }
-                case LOG -> ConfigComparator.LOGGER.info(new TranslatableComponent("configcomparator.files_mismatch.warn", player.getDisplayName()).getString());
+                case LOG -> ConfigComparator.LOGGER.info(I18n.get("configcomparator.files_mismatch.warn", player.getDisplayName()));
             }
         } else ServerEvents.verify(player.getUUID());
     }
