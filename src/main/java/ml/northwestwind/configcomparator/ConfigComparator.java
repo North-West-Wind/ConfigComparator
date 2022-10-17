@@ -9,6 +9,8 @@ import org.apache.logging.log4j.Logger;
 public class ConfigComparator {
     public static final String MOD_ID = "configcomparator";
     public static final Logger LOGGER = LogManager.getLogger();
+    // You better not be >:(
+    public static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
 
     public ConfigComparator() {
         Config.register();

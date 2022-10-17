@@ -21,26 +21,27 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Set;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = ConfigComparator.MOD_ID, value = Dist.DEDICATED_SERVER)
 public class ServerEvents {
     private static MessageDigest digest = null;
-    private static final Set<String> CONFIG_FILES = Sets.newHashSet();
-    private static final Set<String> ABSOLUTE_PATHS = Sets.newHashSet();
+    private static final Set<String> CONFIG_FILES = Sets.newHashSet(), ABSOLUTE_PATHS = Sets.newHashSet();
     private static final Set<UUID> verified = Sets.newHashSet();
     private static String hash = "";
     private static Thread fileChecker = null;
 
     static {
         try {
-            digest = MessageDigest.getInstance("SHA-1");
+            digest = MessageDigest.getInstance(Config.getAlgorithm().getString());
         } catch (NoSuchAlgorithmException ignored) { }
     }
 
@@ -51,7 +52,8 @@ public class ServerEvents {
             if (file.isFile()) hashFile(file);
             else if (file.isDirectory()) hashDirectory(file);
         }
-        ConfigComparator.LOGGER.info("Server: SHA1 digest of files: {}", hash);
+        hash = bytesToHex(digest.digest());
+        ConfigComparator.LOGGER.debug("Server: {} digest of files: {}", Config.getAlgorithm().getString(), hash);
         if (Config.getCheckInterval() > 0) {
             fileChecker = new Thread(() -> {
                 while (!Thread.interrupted()) {
@@ -60,7 +62,7 @@ public class ServerEvents {
                         try {
                             Thread.sleep(Config.getCheckInterval());
                             verified.clear();
-                            Communicator.sendToClient(PacketDistributor.ALL.noArg(), new ClientboundFileListPacket(CONFIG_FILES));
+                            Communicator.sendToClient(PacketDistributor.ALL.noArg(), new ClientboundFileListPacket(CONFIG_FILES, Config.getAlgorithm()));
                             new Thread(() -> {
                                 MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
                                 if (server == null) return;
@@ -87,7 +89,8 @@ public class ServerEvents {
 
     @SubscribeEvent
     public static void serverStopping(final ServerStoppingEvent event) {
-        hash = "";
+        hash = null;
+        verified.clear();
         if (fileChecker != null) {
             fileChecker.interrupt();
             fileChecker = null;
@@ -96,9 +99,16 @@ public class ServerEvents {
 
     private static void hashFile(File file) {
         if (ABSOLUTE_PATHS.contains(file.getAbsolutePath())) return;
-        try (InputStream is = new FileInputStream(file)) {
+        try {
             // fk windows
-            hash = bytesToHex(digest.digest(new String(is.readAllBytes()).replaceAll("\r\n", "\n").getBytes()));
+            String base64;
+            if (ConfigComparator.IS_WINDOWS) base64 = Base64.getEncoder().encodeToString(Files.readAllBytes(file.toPath()));
+            else {
+                String str = new String(Files.readAllBytes(file.toPath()));
+                str = str.replaceAll("\n", "\r\n");
+                base64 = Base64.getEncoder().encodeToString(str.getBytes(StandardCharsets.UTF_8));
+            }
+            digest.update(base64.getBytes(StandardCharsets.UTF_8));
             ABSOLUTE_PATHS.add(file.getAbsolutePath());
             CONFIG_FILES.add(file.getAbsolutePath().replace(FMLPaths.GAMEDIR.get().toFile().getAbsolutePath() + File.separator, ""));
         } catch (IOException e) {
@@ -114,15 +124,7 @@ public class ServerEvents {
     }
 
     private static String bytesToHex(byte[] hash) {
-        StringBuilder hexString = new StringBuilder(2 * hash.length);
-        for (int i = 0; i < hash.length; i++) {
-            String hex = Integer.toHexString(0xff & hash[i]);
-            if(hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
-        }
-        return hexString.toString();
+        return new BigInteger(1, hash).toString(16);
     }
 
     public static String getHash() {
@@ -132,7 +134,7 @@ public class ServerEvents {
     @SubscribeEvent
     public static void playerLoggedIn(final PlayerEvent.PlayerLoggedInEvent event) {
         if (hash.isEmpty() || !(event.getEntity() instanceof ServerPlayer player)) return;
-        Communicator.sendToClient(PacketDistributor.PLAYER.with(() -> player), new ClientboundFileListPacket(CONFIG_FILES));
+        Communicator.sendToClient(PacketDistributor.PLAYER.with(() -> player), new ClientboundFileListPacket(CONFIG_FILES, Config.getAlgorithm()));
         new Thread(() -> {
             int acc = 0;
             try {

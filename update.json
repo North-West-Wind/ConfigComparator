@@ -1,10 +1,12 @@
 {
   "homepage": "https://github.com/North-West-Wind/ConfigComparator/releases/latest",
   "1.19.2": {
-    "2.0.0": "Release"
+    "2.0.0": "Release",
+    "2.0.1": "Default to use MD5 and fixed cross-platform checking"
   },
   "1.19.1": {
-    "2.0.0": "Release"
+    "2.0.0": "Release",
+    "2.0.1": "Default to use MD5 and fixed cross-platform checking"
   },
   "1.18.2": {
     "1.0.0": "Release",
@@ -12,10 +14,10 @@
     "1.0.2": "Added check interval"
   },
   "promos": {
-    "1.19.2-latest": "2.0.0",
-    "1.19.2-recommended": "2.0.0",
-    "1.19.1-latest": "2.0.0",
-    "1.19.1-recommended": "2.0.0",
+    "1.19.2-latest": "2.0.1",
+    "1.19.2-recommended": "2.0.1",
+    "1.19.1-latest": "2.0.1",
+    "1.19.1-recommended": "2.0.1",
     "1.18.2-latest": "1.0.2",
     "1.18.2-recommended": "1.0.2"
   }
